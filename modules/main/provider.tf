@@ -6,15 +6,4 @@ terraform {
       version = "4.31.0"
     }
   }
-  backend "s3" {
-  }
-}
-
-provider "aws" {
-  region = data.aws_caller_identity.current.account_id
-  default_tags {
-    tags = {
-      env = var.env
-    }
-  }
 }

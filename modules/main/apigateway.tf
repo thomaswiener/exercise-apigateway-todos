@@ -22,7 +22,8 @@ resource "aws_api_gateway_deployment" "rest_api" {
     aws_api_gateway_method.get_todo,
     aws_api_gateway_method.update_todo,
     aws_api_gateway_method.delete_todo,
-    aws_api_gateway_integration.integration
+    aws_api_gateway_integration.integration,
+    aws_lambda_function.function
   ]
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
 
@@ -45,6 +46,7 @@ resource "aws_api_gateway_deployment" "rest_api" {
       aws_api_gateway_method.delete_todo.id,
     ],
       [for v in aws_api_gateway_integration.integration: v["id"]],
+      [for v in aws_lambda_function.function: v["id"]],
     )))
   }
 

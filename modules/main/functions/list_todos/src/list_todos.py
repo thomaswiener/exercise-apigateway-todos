@@ -15,11 +15,11 @@ def get_error_response(code, message):
     }
 
 
-def get_success_response(message, code=200):
+def get_success_response(body, code=200):
   return {
     "isBase64Encoded": "false",
     "statusCode": code,
-    "body": json.dumps({"message": message})
+    "body": body
   }
 
 

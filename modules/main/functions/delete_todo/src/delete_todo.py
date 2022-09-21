@@ -30,8 +30,9 @@ def lambda_handler(event, context):
     objects = {'Objects': [{'Key': event['pathParameters']['id']}]}
     try:
         response = client.delete_objects(Bucket=BUCKET, Delete=objects)
-        if not response:
-          raise Exception
+        print(response)
+        #if not response:
+        #  raise Exception
     except Exception as ex:
         return get_error_response(400, "There has been an error while deleting the To-Do object.")
 
@@ -115,7 +116,7 @@ if __name__ == "__main__":
       'queryStringParameters': None,
       'multiValueQueryStringParameters': None,
       'pathParameters': {
-        'id': 'bb73670b-d5e6-42af-9e5a-ce4797841d3d'
+        'id': 'bb73670b-d5e6-42af-9e5a-ce4797841d3dxx'
       },
       'stageVariables': None,
       'requestContext': {
