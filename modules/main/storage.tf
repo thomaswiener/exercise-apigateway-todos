@@ -1,3 +1,8 @@
+# tfsec:ignore:aws-iam-no-policy-wildcards
+# tfsec:ignore:aws-s3-enable-versioning
+# tfsec:ignore:aws-s3-enable-bucket-logging
+# tfsec:ignore:aws-s3-encryption-customer-key
+# tfsec:ignore:aws-s3-enable-bucket-encryption
 resource "aws_s3_bucket" "storage" {
   bucket = local.bucket_storage
 }

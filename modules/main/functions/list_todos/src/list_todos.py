@@ -4,9 +4,6 @@ import os
 from boto3 import client
 from botocore.errorfactory import ClientError
 
-client = boto3.client('s3')
-BUCKET = os.environ.get('BUCKET_STORAGE')
-
 def get_error_response(code, message):
     return {
         "isBase64Encoded": "false",
@@ -24,14 +21,23 @@ def get_success_response(body, code=200):
 
 
 def lambda_handler(event, context):
+    client = boto3.client('s3')
+    BUCKET = os.environ.get('BUCKET_STORAGE')
     items = []
-    for key in client.list_objects(Bucket=BUCKET)['Contents']:
-        response = client.get_object(Bucket=BUCKET, Key=key['Key'])
-        try:
-            item = json.loads(response['Body'].read().decode('utf-8'))
-            items.append(item)
-        except Exception as ex:
-            return get_error_response(400, "There was an error loading the To-Do objects.")
+
+    try:
+        response = client.list_objects(Bucket=BUCKET)
+    except Exception as ex:
+        return get_error_response(400, "There was an error loading the To-Do objects.")
+
+    if 'Contents' in response:
+        for key in response['Contents']:
+            response = client.get_object(Bucket=BUCKET, Key=key['Key'])
+            try:
+                item = json.loads(response['Body'].read().decode('utf-8'))
+                items.append(item)
+            except Exception as ex:
+                return get_error_response(400, "There was an error loading the To-Do objects.")
 
     return get_success_response(json.dumps(items))
 

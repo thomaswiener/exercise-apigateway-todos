@@ -5,14 +5,11 @@ import os
 from boto3 import client
 from botocore.errorfactory import ClientError
 
-client = boto3.client('s3')
-BUCKET = os.environ.get('BUCKET_STORAGE')
-
 def get_error_response(code, message):
     return {
         "isBase64Encoded": "false",
         "statusCode": code,
-        "body": json.dumps({"message": message})
+        "body": json.dumps({"error": message})
     }
 
 
@@ -24,16 +21,43 @@ def get_success_response(message, code=200):
     }
 
 
+def validate(conf):
+    expected_keys = ['id', 'title', 'description']
+
+    for key in expected_keys:
+        if key not in conf or not isinstance(conf[key], str):
+            return False
+
+    return True
+
+
 def lambda_handler(event, context):
-    item = ""
+    client = boto3.client('s3')
+    BUCKET = os.environ.get('BUCKET_STORAGE')
+    error_message = "There was an error while updating the To-Do object."
+    success_message = "To-Do object updated successfully."
+
     try:
         item = json.loads(base64.b64decode(event["body"]))
     except Exception as ex:
-        return get_error_response(400, "There was an error while creating a new To-Do object.")
+        return get_error_response(400, error_message)
 
-    response = client.put_object(Bucket=BUCKET, Body=json.dumps(item), Key=item['id'])
+    if not validate(item):
+        return get_error_response(400, error_message)
 
-    return get_success_response("To-Do object created successfully.")
+    key = event['pathParameters']['id']
+    # check if object key exists
+    try:
+        client.head_object(Bucket=BUCKET, Key=key)
+    except Exception as ex:
+        return get_error_response(400, error_message)
+
+    try:
+        client.put_object(Bucket=BUCKET, Body=json.dumps(item), Key=key)
+    except Exception as ex:
+        return get_error_response(400, error_message)
+
+    return get_success_response(success_message)
 
 
 if __name__ == "__main__":

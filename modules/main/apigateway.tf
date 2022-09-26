@@ -4,6 +4,7 @@ resource "aws_api_gateway_rest_api" "rest_api" {
   binary_media_types = ["*/*"]
 }
 
+# tfsec:ignore:aws-api-gateway-enable-tracing
 resource "aws_api_gateway_stage" "dev" {
   deployment_id = aws_api_gateway_deployment.rest_api.id
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
@@ -23,7 +24,8 @@ resource "aws_api_gateway_deployment" "rest_api" {
     aws_api_gateway_method.update_todo,
     aws_api_gateway_method.delete_todo,
     aws_api_gateway_integration.integration,
-    aws_lambda_function.function
+    aws_lambda_function.function,
+    aws_iam_role_policy.attachment
   ]
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
 
@@ -44,6 +46,7 @@ resource "aws_api_gateway_deployment" "rest_api" {
       aws_api_gateway_method.get_todo.id,
       aws_api_gateway_method.update_todo.id,
       aws_api_gateway_method.delete_todo.id,
+      aws_iam_role_policy.attachment.id
     ],
       [for v in aws_api_gateway_integration.integration: v["id"]],
       [for v in aws_lambda_function.function: v["id"]],
@@ -73,6 +76,7 @@ resource "aws_api_gateway_resource" "id_resource" {
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
 }
 
+# tfsec:ignore:aws-api-gateway-no-public-access
 resource "aws_api_gateway_method" "list_todos" {
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   resource_id   = aws_api_gateway_resource.todo_resource.id
@@ -80,6 +84,7 @@ resource "aws_api_gateway_method" "list_todos" {
   authorization = "NONE"
 }
 
+# tfsec:ignore:aws-api-gateway-no-public-access
 resource "aws_api_gateway_method" "update_todo" {
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   resource_id   = aws_api_gateway_resource.todo_resource.id
@@ -87,66 +92,80 @@ resource "aws_api_gateway_method" "update_todo" {
   authorization = "NONE"
 }
 
+# tfsec:ignore:aws-api-gateway-no-public-access
 resource "aws_api_gateway_method" "get_todo" {
-  rest_api_id   = aws_api_gateway_rest_api.rest_api.id
-  resource_id   = aws_api_gateway_resource.id_resource.id
-  http_method   = "GET"
-  authorization = "NONE"
+  rest_api_id        = aws_api_gateway_rest_api.rest_api.id
+  resource_id        = aws_api_gateway_resource.id_resource.id
+  http_method        = "GET"
+  authorization      = "NONE"
   request_parameters = {
     "method.request.path.id" = true
   }
 }
 
+# tfsec:ignore:aws-api-gateway-no-public-access
 resource "aws_api_gateway_method" "create_todo" {
-  rest_api_id   = aws_api_gateway_rest_api.rest_api.id
-  resource_id   = aws_api_gateway_resource.id_resource.id
-  http_method   = "PUT"
-  authorization = "NONE"
+  rest_api_id        = aws_api_gateway_rest_api.rest_api.id
+  resource_id        = aws_api_gateway_resource.id_resource.id
+  http_method        = "PUT"
+  authorization      = "NONE"
   request_parameters = {
     "method.request.path.id" = true
   }
 }
 
+# tfsec:ignore:aws-api-gateway-no-public-access
 resource "aws_api_gateway_method" "delete_todo" {
-  rest_api_id   = aws_api_gateway_rest_api.rest_api.id
-  resource_id   = aws_api_gateway_resource.id_resource.id
-  http_method   = "DELETE"
-  authorization = "NONE"
+  rest_api_id        = aws_api_gateway_rest_api.rest_api.id
+  resource_id        = aws_api_gateway_resource.id_resource.id
+  http_method        = "DELETE"
+  authorization      = "NONE"
   request_parameters = {
     "method.request.path.id" = true
   }
 }
 
 resource "aws_api_gateway_integration" "integration" {
-  for_each    = local.endpoints
-  rest_api_id = aws_api_gateway_rest_api.rest_api.id
-  resource_id = each.value.resource_id
-  http_method = each.value.http_method
+  for_each                = local.endpoints
+  rest_api_id             = aws_api_gateway_rest_api.rest_api.id
+  resource_id             = each.value.resource_id
+  http_method             = each.value.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  credentials = aws_iam_role.apigateway_execution.arn
+  credentials             = aws_iam_role.apigateway_execution.arn
   uri                     = lookup(lookup(aws_lambda_function.function, each.key), "qualified_invoke_arn")
 }
 
-#resource "aws_api_gateway_domain_name" "rest_api" {
-#  certificate_arn = var.acm_arns[var.domain_name]
-#  domain_name     = "api.${var.domain_name}"
-#}
+resource "aws_iam_role" "apigateway_execution" {
+  name               = "apigateway-execution"
+  assume_role_policy = data.aws_iam_policy_document.apigateway_execution.json
+}
 
-#resource "aws_route53_record" "internal_record" {
-#  name    = aws_api_gateway_domain_name.internal_domain_name.domain_name
-#  type    = "A"
-#  zone_id = var.zones[var.domain_name]
-#
-#  alias {
-#    evaluate_target_health = true
-#    name                   = aws_api_gateway_domain_name.internal_domain_name.cloudfront_domain_name
-#    zone_id                = aws_api_gateway_domain_name.internal_domain_name.cloudfront_zone_id
-#  }
-#}
+data "aws_iam_policy_document" "apigateway_execution" {
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "apigateway.amazonaws.com",
+        "lambda.amazonaws.com"
+      ]
+      type = "Service"
+    }
+    actions = ["sts:AssumeRole"]
+  }
+}
 
-#resource "aws_api_gateway_base_path_mapping" "internal_mapping" {
-#  api_id      = aws_api_gateway_rest_api.rest_api.id
-#  stage_name  = aws_api_gateway_stage.stage.stage_name
-#  domain_name = aws_api_gateway_domain_name.rest_api.domain_name
-#}
+resource "aws_iam_role_policy" "attachment" {
+  role   = aws_iam_role.apigateway_execution.name
+  policy = data.aws_iam_policy_document.document.json
+}
+
+data "aws_iam_policy_document" "document" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "lambda:InvokeFunction"
+    ]
+    resources = [for v in aws_lambda_function.function: v["qualified_arn"]]
+  }
+}

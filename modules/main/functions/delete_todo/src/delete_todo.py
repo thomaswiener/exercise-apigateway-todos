@@ -4,14 +4,11 @@ import os
 from boto3 import client
 from botocore.errorfactory import ClientError
 
-client = boto3.client('s3')
-BUCKET = os.environ.get('BUCKET_STORAGE')
-
 def get_error_response(code, message):
     return {
         "isBase64Encoded": "false",
         "statusCode": code,
-        "body": json.dumps({"message": message})
+        "body": json.dumps({"error": message})
     }
 
 
@@ -24,15 +21,23 @@ def get_success_response(message, code=200):
 
 
 def lambda_handler(event, context):
+    client = boto3.client('s3')
+    BUCKET = os.environ.get('BUCKET_STORAGE')
+
     if 'pathParameters' not in event:
         return get_error_response(500, "Missing parameter: id")
 
-    objects = {'Objects': [{'Key': event['pathParameters']['id']}]}
+    key = event['pathParameters']['id']
+
+    # check if object key exists
     try:
-        response = client.delete_objects(Bucket=BUCKET, Delete=objects)
-        print(response)
-        #if not response:
-        #  raise Exception
+        client.head_object(Bucket=BUCKET, Key=key)
+    except ClientError:
+        return get_error_response(400, "There has been an error while deleting the To-Do object.")
+
+    # delete object
+    try:
+        client.delete_object(Bucket=BUCKET, Key=key)
     except Exception as ex:
         return get_error_response(400, "There has been an error while deleting the To-Do object.")
 

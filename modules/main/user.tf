@@ -1,5 +1,5 @@
 resource "aws_iam_user" "readonly" {
-  name = "ReadOnly"
+  name = "readonly"
 }
 
 resource "aws_iam_user_policy_attachment" "attachment" {

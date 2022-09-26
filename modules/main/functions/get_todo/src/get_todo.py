@@ -4,9 +4,6 @@ import os
 from boto3 import client
 from botocore.errorfactory import ClientError
 
-client = boto3.client('s3')
-BUCKET = os.environ.get('BUCKET_STORAGE')
-
 def get_error_response(code, message):
     return {
         "isBase64Encoded": "false",
@@ -24,6 +21,8 @@ def get_success_response(body, code=200):
 
 
 def lambda_handler(event, context):
+    client = boto3.client('s3')
+    BUCKET = os.environ.get('BUCKET_STORAGE')
     try:
         response = client.get_object(Bucket=BUCKET, Key=event['pathParameters']['id'])
     except ClientError as ex:

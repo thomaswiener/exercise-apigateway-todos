@@ -14,6 +14,7 @@ data "archive_file" "file" {
   output_path = "${path.module}/functions/${each.key}.zip"
 }
 
+# tfsec:ignore:aws-lambda-enable-tracing
 resource "aws_lambda_function" "function" {
   for_each         = local.endpoints
   function_name    = replace(each.key, "_", "-")
@@ -33,47 +34,11 @@ resource "aws_lambda_function" "function" {
   }
 }
 
+# tfsec:ignore:aws-cloudwatch-log-group-customer-key
 resource "aws_cloudwatch_log_group" "function" {
   for_each          = local.endpoints
   name              = "/aws/lambda/${lookup(lookup(aws_lambda_function.function, each.key), "function_name")}"
   retention_in_days = 1
-}
-
-resource "aws_iam_role" "apigateway_execution" {
-  name               = "apigateway-execution"
-  assume_role_policy = data.aws_iam_policy_document.apigateway_execution.json
-}
-
-data "aws_iam_policy_document" "apigateway_execution" {
-  statement {
-    effect = "Allow"
-    principals {
-      identifiers = [
-        "apigateway.amazonaws.com",
-        "lambda.amazonaws.com"
-      ]
-      type = "Service"
-    }
-    actions = ["sts:AssumeRole"]
-  }
-}
-
-resource "aws_iam_role_policy" "attachment" {
-  role   = aws_iam_role.apigateway_execution.name
-  policy = data.aws_iam_policy_document.document.json
-}
-
-data "aws_iam_policy_document" "document" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "lambda:*"
-      #"lambda:invokeFunction"
-    ]
-    resources = [
-      "*"
-    ]
-  }
 }
 
 resource "aws_iam_role" "lambda_basic" {
@@ -109,6 +74,7 @@ resource "aws_iam_policy" "lambda_policy_attachment" {
   policy = data.aws_iam_policy_document.lambda_policy_document.json
 }
 
+# tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "lambda_policy_document" {
   statement {
     effect = "Allow"

@@ -5,15 +5,14 @@ import os
 from boto3 import client
 from botocore.errorfactory import ClientError
 
-client = boto3.client('s3')
-BUCKET = os.environ.get('BUCKET_STORAGE')
 
 def get_error_response(code, message):
     return {
         "isBase64Encoded": "false",
         "statusCode": code,
-        "body": json.dumps({"message": message})
+        "body": json.dumps({"error": message})
     }
+
 
 def get_success_response(message, code=200):
     return {
@@ -22,22 +21,44 @@ def get_success_response(message, code=200):
         "body": json.dumps({"message": message})
     }
 
+
+def validate(conf):
+    expected_keys = ['id', 'title', 'description']
+
+    for key in expected_keys:
+        if key not in conf or not isinstance(conf[key], str):
+            return False
+
+    return True
+
+
+
 def lambda_handler(event, context):
+    client = boto3.client('s3')
+    BUCKET = os.environ.get('BUCKET_STORAGE')
+    error_message = "There was an error while creating a new To-Do object."
+    success_message = 'To-Do object created successfully.'
+
     if 'body' not in event:
         return get_error_response(500, "Internal Server Error")
 
     try:
         item = json.loads(base64.b64decode(event["body"]))
     except Exception as ex:
-        print(f'Error reading object')
-        return get_error_response(500, 'Error reading object')
+        return get_error_response(400, error_message)
 
-    response = client.put_object(Bucket=BUCKET, Body=json.dumps(item), Key=item['id'])
+    if not validate(item):
+        return get_error_response(400, error_message)
+
+    try:
+        response = client.put_object(Bucket=BUCKET, Body=json.dumps(item), Key=item['id'])
+    except Exception as ex:
+        return get_error_response(400, error_message)
 
     if response:
-        return get_success_response('To-Do object updated successfully.')
+        return get_success_response(success_message)
 
-    return get_error_response(400, "There was an error while updating the To-Do object.")
+    return get_error_response(400, error_message)
 
 
 if __name__ == "__main__":
