@@ -9,10 +9,10 @@ resource "aws_api_gateway_stage" "dev" {
   deployment_id = aws_api_gateway_deployment.rest_api.id
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   stage_name    = "dev"
-  access_log_settings {
-    destination_arn = "arn:aws:logs:eu-central-1:643355622722:log-group:apigateway"
-    format          = "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] \"$context.httpMethod $context.resourcePath $context.protocol\" $context.status $context.responseLength $context.requestId $context.integrationErrorMessage"
-  }
+  #access_log_settings {
+  #  destination_arn = "arn:aws:logs:eu-central-1:${data.aws_caller_identity.current.account_id}:log-group:apigateway"
+  #  format          = "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] \"$context.httpMethod $context.resourcePath $context.protocol\" $context.status $context.responseLength $context.requestId $context.integrationErrorMessage"
+  #}
 }
 
 resource "aws_api_gateway_deployment" "rest_api" {

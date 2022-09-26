@@ -1,15 +1,13 @@
 #!/usr/bin/python3.9
 
+import os
 import sys
-import time
 import json
 import boto3
 import urllib3
-import botocore
-from datetime import datetime
 
 http = urllib3.PoolManager()
-base_url = 'https://b8xsmkn1f8.execute-api.eu-central-1.amazonaws.com/dev'
+base_url = os.environ.get('BASEURL')
 headers = {'Content-Type': 'application/json'}
 s3 = boto3.resource('s3')
 

@@ -15,14 +15,16 @@ Setup a sharable, centralized terraform state object store.
 
 ```sh
 aws s3api create-bucket \
---bucket terraform-state-${ACCOUNT_ID}
+--bucket terraform-state-${ACCOUNT_ID} \
+--region eu-central-1 \
+--create-bucket-configuration LocationConstraint=eu-central-1
 ```
 
 Block all public access
 
 ```sh
 aws s3api put-public-access-block \
---bucket ${NAME}-${ACCOUNT_ID}-terraform-state \
+--bucket terraform-state-${ACCOUNT_ID} \
 --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 ```
 
